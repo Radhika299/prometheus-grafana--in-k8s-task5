@@ -1,0 +1,85 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-expose
+spec:
+  type: NodePort
+  selector:
+    app: graf
+  ports:
+  - port: 3000
+    nodePort: 32000
+---
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: graf-pv
+  labels:
+    app: graf
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data/graf/"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: graf-pvc
+    labels:
+        app: graf
+spec:
+    accessModes:
+        - ReadWriteOnce
+    storageClassName: manual
+    resources:
+        requests:
+            storage: 1Gi
+      
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: graf-deployment
+    labels:
+        app: graf
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: graf
+    strategy:
+        type: RollingUpdate
+    template:
+        metadata:
+            labels:
+                app: graf
+        spec:
+            containers:
+                - image: grafana/grafana
+                  name: graf-container
+                  ports:
+                    - containerPort: 3000
+                  volumeMounts:
+                    - name: graf-data
+                      mountPath: /var/lib/grafana/
+            securityContext:
+                runAsUser: 0
+            
+            volumes:
+                - name: graf-data
+                  persistentVolumeClaim:
+                    claimName: graf-pvc
+                
+
+
+    
+
+
